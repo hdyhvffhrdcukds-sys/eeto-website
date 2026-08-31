@@ -81,8 +81,6 @@
   .detail-container { max-width: 1100px; margin: 0 auto; padding: 60px 48px; display: grid; grid-template-columns: 1fr 420px; gap: 64px; }
   .detail-visual { width: 100%; aspect-ratio: 16 / 10; height: auto; background: #f0f0f0; border-radius: 16px; overflow: hidden; position: sticky; top: 80px; display: flex; align-items: center; justify-content: center; }
   .detail-visual img { width: 100%; height: 100%; object-fit: cover; }
-  .back-btn { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--gray-600); background: none; border: none; cursor: pointer; margin-bottom: 32px; padding: 0; }
-  .back-btn:hover { color: var(--black); }
   .detail-tag { font-size: 13px; font-weight: 600; color: var(--accent); background: #fff0f0; padding: 6px 14px; border-radius: 6px; display: inline-block; margin-bottom: 16px; }
   .detail-name { font-size: 42px; font-weight: 800; letter-spacing: -1px; margin-bottom: 16px; }
   .detail-desc { font-size: 16px; color: var(--gray-600); line-height: 1.7; margin-bottom: 32px; }
@@ -405,7 +403,7 @@
 <div id="page-home" class="page active">
   <section class="hero">
     <div class="hero-badge">기술 중심 레이저 장비 솔루션</div>
-    <h1>기술력과 A/S로,<br><span>레이저 장비의 새로운</span><br>기준을 세우다.</h1>
+    <h1>기술력과 확실한 A/S로,<br><span>레이저 장비의 새로운</span><br>기준을 세우다.</h1>
     <p>다양한 레이저 장비와 맞춤 사양을 확인하고, 필요한 상담을 요청해 주세요.</p>
     <div class="hero-btns">
       <button class="btn-primary" onclick="scrollToProducts()">장비 둘러보기</button>
@@ -635,7 +633,6 @@
 </div>
     </div>
     <div class="detail-info">
-      <button class="back-btn" onclick="goBackFromDetail()">← 뒤로가기</button>
       <div id="detail-tag" class="detail-tag"></div>
       <div id="detail-name" class="detail-name"></div>
       <div id="detail-desc" class="detail-desc"></div>
@@ -1754,38 +1751,9 @@ function showPage(page){
 
 function showDetail(id, returnPage = "home"){
   detailReturnPage = returnPage;
-  currentProduct = products.find(p=>p.id===id);
-  const p = currentProduct;
+  const p = products.find(product => product.id === id);
   if (!p) return;
-  const v = document.getElementById("detail-video");
-  const img = document.getElementById("detail-image");
-  if (p.video) {
-    img.style.display = "none";
-    img.removeAttribute("src");
-    v.style.display = "block";
-    if (v.getAttribute("src") !== p.video) {
-      v.setAttribute("src", p.video);
-      v.load();
-    }
-  } else {
-    v.pause();
-    v.removeAttribute("src");
-    v.load();
-    v.style.display = "none";
-    img.src = p.image || MACHINE_IMG;
-    img.alt = p.name;
-    img.style.display = "block";
-  }
-  document.getElementById("detail-tag").textContent = p.tag;
-  document.getElementById("detail-name").textContent = p.name;
-  document.getElementById("detail-desc").textContent = p.fullDesc;
-  document.getElementById("detail-specs").innerHTML = p.specs.map(([k,v])=>
-    `<div class="spec-row"><span class="spec-key">${k}</span><span class="spec-val">${v}</span></div>`).join("");
-  showPage("detail");
-}
-
-function goBackFromDetail(){
-  showPage(detailReturnPage);
+  openRecommendedDetailModal(id, p.name, "");
 }
 
 function scrollToProducts(){ setTimeout(()=>document.getElementById("products").scrollIntoView({behavior:"smooth"}),100); }
