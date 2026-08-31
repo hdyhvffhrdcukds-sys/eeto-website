@@ -234,12 +234,12 @@
   .feature-card { background: var(--gray-100); border-radius: 12px; padding: 28px; border-left: 4px solid var(--accent); }
   .feature-card h3 { font-size: 17px; font-weight: 800; margin-bottom: 10px; }
   .feature-card p { font-size: 14px; color: var(--gray-600); line-height: 1.7; }
-  .series-accordion { border: 1px solid var(--gray-200); border-radius: 14px; overflow: hidden; margin-top: 28px; background: white; }
-  .series-accordion summary { list-style: none; cursor: pointer; padding: 22px 24px; display: flex; align-items: center; justify-content: space-between; font-size: 20px; font-weight: 800; }
-  .series-accordion summary::-webkit-details-marker { display: none; }
-  .series-accordion summary::after { content: '＋'; color: var(--accent); font-size: 26px; font-weight: 400; line-height: 1; }
-  .series-accordion[open] summary { border-bottom: 1px solid var(--gray-200); }
-  .series-accordion[open] summary::after { content: '−'; }
+  .series-tabs { display: flex; gap: 8px; margin-top: 28px; padding-bottom: 8px; overflow-x: auto; scrollbar-width: thin; }
+  .series-tab { flex: 0 0 auto; border: 1px solid var(--gray-200); border-radius: 999px; background: white; color: var(--gray-600); padding: 13px 20px; font-size: 15px; font-weight: 800; cursor: pointer; transition: .2s ease; }
+  .series-tab:hover { border-color: var(--gray-900); color: var(--gray-900); }
+  .series-tab.active { border-color: var(--accent); background: var(--accent); color: white; box-shadow: 0 6px 16px rgba(220,38,38,.2); }
+  .series-tab-panel { border: 1px solid var(--gray-200); border-radius: 14px; margin-top: 14px; background: white; overflow: hidden; }
+  .series-tab-panel[hidden] { display: none; }
   .series-accordion-content { padding: 30px 24px 1px; }
   .series-accordion-content .about-section-sub { margin-bottom: 28px; }
   .series-accordion-content .feature-grid { margin-bottom: 30px; }
@@ -256,7 +256,7 @@
   .compare-table .eeto { color: var(--accent); font-weight: 700; }
   .compare-table .bad { color: var(--gray-400); }
   .about-divider { border: none; border-top: 1px solid var(--gray-200); margin: 0 48px; }
-  @media (max-width: 768px) { .about-hero { padding: 80px 20px 60px; } .about-section { padding: 60px 20px; } .series-equipment-visual { grid-template-columns: 1fr; padding: 20px; text-align: center; } }
+  @media (max-width: 768px) { .about-hero { padding: 80px 20px 60px; } .about-section { padding: 60px 20px; } .series-tabs { margin-right: -20px; padding-right: 20px; } .series-tab { padding: 11px 16px; font-size: 14px; } .series-accordion-content { padding: 22px 16px 1px; } .series-equipment-visual { grid-template-columns: 1fr; padding: 20px; text-align: center; } }
 
   /* EQUIPMENT CHOOSER */
   .chooser-page { min-height: calc(100vh - 64px); padding: 108px 48px 88px; background: linear-gradient(160deg, #fff5f5 0%, #fff 58%, #f7f7f7 100%); }
@@ -1130,9 +1130,16 @@
   <!-- EETO 장비 특징 -->
   <div class="about-section">
     <div class="about-section-title">EETO 장비의 특징</div>
-    <div class="about-section-sub">시리즈별 장비 특징을 선택해 확인해 주세요.</div>
-    <details class="series-accordion">
-      <summary>FLEX 시리즈 특징</summary>
+    <div class="about-section-sub">기본 FLEX 시리즈 또는 원하는 탭을 선택해 특징을 확인해 주세요.</div>
+    <div class="series-tabs" role="tablist" aria-label="EETO 장비 시리즈">
+      <button class="series-tab active" type="button" role="tab" aria-selected="true" aria-controls="series-flex" onclick="selectSeriesTab('series-flex', this)">FLEX</button>
+      <button class="series-tab" type="button" role="tab" aria-selected="false" aria-controls="series-flx" onclick="selectSeriesTab('series-flx', this)">FLX</button>
+      <button class="series-tab" type="button" role="tab" aria-selected="false" aria-controls="series-fgt" onclick="selectSeriesTab('series-fgt', this)">FGT 갠트리</button>
+      <button class="series-tab" type="button" role="tab" aria-selected="false" aria-controls="series-giii" onclick="selectSeriesTab('series-giii', this)">FLX GIII 자동화</button>
+      <button class="series-tab" type="button" role="tab" aria-selected="false" aria-controls="series-fhs" onclick="selectSeriesTab('series-fhs', this)">FHS 형강</button>
+      <button class="series-tab" type="button" role="tab" aria-selected="false" aria-controls="series-fpc" onclick="selectSeriesTab('series-fpc', this)">FPC 파이프</button>
+    </div>
+    <section class="series-tab-panel" id="series-flex" role="tabpanel">
       <div class="series-accordion-content">
         <div class="about-section-sub">합리적인 가격과 높은 기계 내구성을 갖춘 Middle Power 파이버 레이저 커팅기</div>
         <div class="series-equipment-visual">
@@ -1151,9 +1158,8 @@
           <div class="feature-card"><h3>🤖 스마트 제어 시스템</h3><p>적응형 피어싱, 플라이컷, 마이크로조인트와 충돌 방지 등 다양한 스마트 기능을 지원합니다.</p></div>
         </div>
       </div>
-    </details>
-    <details class="series-accordion">
-      <summary>FLX 시리즈 특징</summary>
+    </section>
+    <section class="series-tab-panel" id="series-flx" role="tabpanel" hidden>
       <div class="series-accordion-content">
         <div class="about-section-sub">저렴한 가격과 기계 내구성에 신경 쓴 Middle Power 파이버 레이저 커팅기</div>
         <div class="series-equipment-visual">
@@ -1198,9 +1204,8 @@
       </div>
         </div>
       </div>
-    </details>
-    <details class="series-accordion">
-      <summary>FGT 갠트리 시리즈 특징</summary>
+    </section>
+    <section class="series-tab-panel" id="series-fgt" role="tabpanel" hidden>
       <div class="series-accordion-content">
         <div class="series-equipment-visual">
           <img src="./series-fgt-cutout-v2.png" alt="EETO FGT 대형 갠트리 파이버 레이저 커팅기 전체 구성">
@@ -1216,10 +1221,9 @@
           <div class="feature-card"><h3>🎯 고속·정밀 이동</h3><p>최대 80m/min 이동 속도와 ±0.03mm/m급 포지셔닝 정확도로 대형 가공의 품질을 확보합니다.</p></div>
         </div>
       </div>
-    </details>
+    </section>
 
-    <details class="series-accordion">
-      <summary>FLX GIII 자동화 시리즈 특징</summary>
+    <section class="series-tab-panel" id="series-giii" role="tabpanel" hidden>
       <div class="series-accordion-content">
         <div class="series-equipment-visual">
           <img src="./series-flx-giii-cutout.png" alt="EETO FLX GIII 자동화 레이저 커팅 시스템">
@@ -1235,10 +1239,9 @@
           <div class="feature-card"><h3>🔄 유연한 레이아웃</h3><p>공장 구조와 생산 흐름에 맞춘 배치가 가능하며 향후 자동화 설비 확장에도 대응합니다.</p></div>
         </div>
       </div>
-    </details>
+    </section>
 
-    <details class="series-accordion">
-      <summary>FHS 형강 가공 시리즈 특징</summary>
+    <section class="series-tab-panel" id="series-fhs" role="tabpanel" hidden>
       <div class="series-accordion-content">
         <div class="series-equipment-visual">
           <img src="./series-fhs-cutout.png" alt="EETO FHS H빔 3D 5축 레이저 커팅 스테이션">
@@ -1254,10 +1257,9 @@
           <div class="feature-card"><h3>💻 Tekla 연계</h3><p>설계 데이터를 활용한 자동 네스팅과 마킹으로 입력 작업과 제작 오류를 줄일 수 있습니다.</p></div>
         </div>
       </div>
-    </details>
+    </section>
 
-    <details class="series-accordion">
-      <summary>FPC 파이프 커팅 시리즈 특징</summary>
+    <section class="series-tab-panel" id="series-fpc" role="tabpanel" hidden>
       <div class="series-accordion-content">
         <div class="series-equipment-visual">
           <img src="./series-fpc-cutout.png" alt="EETO FPC 파이프 레이저 커팅기 전체 모델">
@@ -1273,7 +1275,7 @@
           <div class="feature-card"><h3>🔩 형강·베벨 가공</h3><p>HD 모델은 H빔 등 대형 프로파일과 베벨 절단 옵션을 지원해 후속 공정을 줄입니다.</p></div>
         </div>
       </div>
-    </details>
+    </section>
   </div>
 
 <hr class="about-divider">
@@ -1740,6 +1742,17 @@ function showPurchasePage(){
   showPage("home");
   setDeliveryHistoryVisible(false);
   scrollToProducts();
+}
+
+function selectSeriesTab(panelId, selectedTab) {
+  document.querySelectorAll('.series-tab-panel').forEach(panel => {
+    panel.hidden = panel.id !== panelId;
+  });
+  document.querySelectorAll('.series-tab').forEach(tab => {
+    const active = tab === selectedTab;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', String(active));
+  });
 }
 
 function showPage(page){
