@@ -7,6 +7,7 @@
 <meta name="description" content="EETO LASER KOREA 공식 홈페이지. 파이버 레이저 절단기, 판재·파이프·형강 레이저 커팅기와 자동화 장비를 소개하고 장비 추천, 구매 상담, 설치 및 A/S를 제공합니다.">
 <meta name="keywords" content="레이저 절단기, 레이저 커팅기, 파이버 레이저, 파이버 레이저 절단기, 판재 레이저, 파이프 레이저, 형강 레이저, EETO LASER KOREA">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="google-site-verification" content="kxbtvWY-SI76U5YO1IxzThGJeHit6YToWoO4InHqccg">
 <link rel="canonical" href="https://hdyhvffhrdcukds-sys.github.io/eeto-website/">
 <link rel="icon" type="image/png" href="https://hdyhvffhrdcukds-sys.github.io/eeto-website/eeto-mts-logo-transparent.png">
 
@@ -747,6 +748,7 @@
       <div class="form-group"><label>담당자 성함 *</label><input type="text" id="ct-name" placeholder="홍길동"></div>
       <div class="form-group"><label>연락처 *</label><input type="tel" id="ct-phone" placeholder="010-0000-0000"></div>
     </div>
+    <div class="form-group"><label>이메일 *</label><input type="email" id="ct-email" placeholder="name@company.com" autocomplete="email"></div>
     <div class="form-group"><label>회사명</label><input type="text" id="ct-company" placeholder="(주)회사명"></div>
     <div class="form-group"><label>회사 주소</label><input type="text" id="ct-address" placeholder="설치 예정지 또는 회사 주소를 입력해 주세요."></div>
 
@@ -810,6 +812,7 @@
       <div class="form-group"><label>담당자 성함 *</label><input type="text" id="pg-name" placeholder="홍길동"></div>
       <div class="form-group"><label>연락처 *</label><input type="tel" id="pg-phone" placeholder="010-0000-0000"></div>
     </div>
+    <div class="form-group"><label>이메일 *</label><input type="email" id="pg-email" placeholder="name@company.com" autocomplete="email"></div>
     <div class="form-group"><label>회사명</label><input type="text" id="pg-company" placeholder="(주)회사명"></div>
     <button class="btn-contact-accent" id="program-submit-button" onclick="submitProgramInquiry()">프로그램 문의 보내기 →</button>
     <p style="font-size:12px;color:var(--gray-400);text-align:center;margin-top:12px;">담당자가 1영업일 이내 연락드립니다.</p>
@@ -827,6 +830,7 @@
       <div class="form-group"><label>담당자 *</label><input type="text" id="cs-name" placeholder="홍길동"></div>
       <div class="form-group"><label>연락처 *</label><input type="tel" id="cs-phone" placeholder="010-0000-0000"></div>
     </div>
+    <div class="form-group"><label>이메일 *</label><input type="email" id="cs-email" placeholder="name@company.com" autocomplete="email"></div>
     <div class="form-group"><label>주소 *</label><input type="text" id="cs-address" placeholder="회사 또는 장비 설치 주소를 입력해 주세요."></div>
     <div class="form-group"><label>문의 내용 *</label>
       <textarea id="cs-message" rows="5" placeholder="문의하실 내용을 자세히 적어주세요."></textarea>
@@ -853,6 +857,7 @@
       <div class="form-group"><label>담당자 성함 *</label><input type="text" id="rp-name" placeholder="홍길동"></div>
       <div class="form-group"><label>연락처 *</label><input type="tel" id="rp-phone" placeholder="010-0000-0000"></div>
     </div>
+    <div class="form-group"><label>이메일 *</label><input type="email" id="rp-email" placeholder="name@company.com" autocomplete="email"></div>
     <div class="form-group"><label>회사명</label><input type="text" id="rp-company" placeholder="(주)회사명"></div>
     <div class="form-group"><label>회사 주소</label><input type="text" id="rp-address" placeholder="회사 또는 장비 설치 주소를 입력해 주세요."></div>
     <button class="btn-contact-accent" id="repair-submit-button" onclick="submitRepairInquiry()">수리 문의 보내기 →</button>
@@ -883,6 +888,7 @@
       <div class="form-group"><label>담당자 이름 *</label><input type="text" id="vt-name" placeholder="홍길동"></div>
       <div class="form-group"><label>연락처 *</label><input type="tel" id="vt-phone" placeholder="010-0000-0000"></div>
     </div>
+    <div class="form-group"><label>이메일 *</label><input type="email" id="vt-email" placeholder="name@company.com" autocomplete="email"></div>
     <div class="form-group"><label>방문 주소 *</label><input type="text" id="vt-address" placeholder="방문을 원하시는 회사 주소를 입력해 주세요."></div>
     <div class="form-group"><label>문의 내용</label>
       <textarea id="vt-message" rows="5" placeholder="희망 방문 일정, 상담 내용, 설치 환경 등을 적어주세요."></textarea>
@@ -1585,7 +1591,7 @@
       <div class="delivery-gallery">
         <div class="delivery-card">
           <video class="delivery-img delivery-video" controls playsinline preload="metadata">
-            <source src="https://pub-21f0e0d5e57d449182ecc921049484f9.r2.dev/ulsan-hyundai-30kw-bevel.mp4" type="video/mp4">
+            <source src="ulsan-hyundai-30kw-bevel-h264.mp4" type="video/mp4">
             브라우저가 동영상 재생을 지원하지 않습니다.
           </video>
           <div class="delivery-info">
@@ -2482,6 +2488,7 @@ function openContactModal(idOrName, type) {
   document.getElementById('contact-product-label').textContent = '관심 장비: ' + label;
   document.getElementById('ct-name').value = '';
   document.getElementById('ct-phone').value = '';
+  document.getElementById('ct-email').value = '';
   document.getElementById('ct-company').value = '';
   document.getElementById('ct-address').value = '';
   document.getElementById('ct-message').value = '';
@@ -2497,15 +2504,21 @@ function closeContactModalNew() {
 
 const QUOTE_WORKER_URL = 'https://eeto-flex-quote.jjmen.workers.dev/';
 
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 async function submitContact() {
   const name = document.getElementById('ct-name').value.trim();
   const phone = document.getElementById('ct-phone').value.trim();
+  const email = document.getElementById('ct-email').value.trim();
   const company = document.getElementById('ct-company').value.trim() || '(미입력)';
   const address = document.getElementById('ct-address').value.trim() || '(미입력)';
   const message = document.getElementById('ct-message').value.trim() || '(없음)';
   const powers = [...document.querySelectorAll('input[name="ct-power"]:checked')].map(input => input.value);
   const options = [...document.querySelectorAll('input[name="ct-option"]:checked')].map(input => input.value);
-  if (!name || !phone) { alert('성함과 연락처를 입력해 주세요.'); return; }
+  if (!name || !phone || !email) { alert('성함, 연락처, 이메일을 입력해 주세요.'); return; }
+  if (!isValidEmail(email)) { alert('올바른 이메일 주소를 입력해 주세요.'); return; }
   if (!powers.length) { alert('원하시는 출력을 하나 이상 선택해 주세요.'); return; }
   const body = [
     'EETO FLEX 견적 요청',
@@ -2513,6 +2526,7 @@ async function submitContact() {
     `관심 장비: ${contactTarget || 'FLEX Series'}`,
     `담당자: ${name}`,
     `연락처: ${phone}`,
+    `이메일: ${email}`,
     `회사명: ${company}`,
     `회사 주소: ${address}`,
     `출력 선택: ${powers.join(', ')}`,
@@ -2549,6 +2563,7 @@ async function submitContact() {
 function openProgramModal() {
   document.getElementById('pg-name').value = '';
   document.getElementById('pg-phone').value = '';
+  document.getElementById('pg-email').value = '';
   document.getElementById('pg-company').value = '';
   document.getElementById('pg-message').value = '';
   document.querySelectorAll('input[name="pg-program"]').forEach(input => input.checked = false);
@@ -2564,11 +2579,13 @@ function closeProgramModal() {
 async function submitProgramInquiry() {
   const name = document.getElementById('pg-name').value.trim();
   const phone = document.getElementById('pg-phone').value.trim();
+  const email = document.getElementById('pg-email').value.trim();
   const company = document.getElementById('pg-company').value.trim() || '(미입력)';
   const programs = [...document.querySelectorAll('input[name="pg-program"]:checked')].map(input => input.value);
   const message = document.getElementById('pg-message').value.trim();
 
-  if (!name || !phone) { alert('성함과 연락처를 입력해 주세요.'); return; }
+  if (!name || !phone || !email) { alert('성함, 연락처, 이메일을 입력해 주세요.'); return; }
+  if (!isValidEmail(email)) { alert('올바른 이메일 주소를 입력해 주세요.'); return; }
   if (!programs.length) { alert('사용 중인 프로그램 또는 개발 요청을 하나 이상 선택해 주세요.'); return; }
   if (!message) { alert('문의 내용을 입력해 주세요.'); return; }
 
@@ -2577,6 +2594,7 @@ async function submitProgramInquiry() {
     '',
     `담당자: ${name}`,
     `연락처: ${phone}`,
+    `이메일: ${email}`,
     `회사명: ${company}`,
     `선택 항목: ${programs.join(', ')}`,
     '',
@@ -2607,7 +2625,7 @@ async function submitProgramInquiry() {
 }
 
 function openCustomerServiceModal() {
-  ['cs-company', 'cs-name', 'cs-phone', 'cs-address', 'cs-message'].forEach(id => {
+  ['cs-company', 'cs-name', 'cs-phone', 'cs-email', 'cs-address', 'cs-message'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('customer-service-modal').classList.add('open');
@@ -2623,13 +2641,15 @@ async function submitCustomerServiceInquiry() {
   const company = document.getElementById('cs-company').value.trim();
   const name = document.getElementById('cs-name').value.trim();
   const phone = document.getElementById('cs-phone').value.trim();
+  const email = document.getElementById('cs-email').value.trim();
   const address = document.getElementById('cs-address').value.trim();
   const message = document.getElementById('cs-message').value.trim();
 
-  if (!company || !name || !phone || !address || !message) {
-    alert('업체명, 담당자, 연락처, 주소, 문의 내용을 모두 입력해 주세요.');
+  if (!company || !name || !phone || !email || !address || !message) {
+    alert('업체명, 담당자, 연락처, 이메일, 주소, 문의 내용을 모두 입력해 주세요.');
     return;
   }
+  if (!isValidEmail(email)) { alert('올바른 이메일 주소를 입력해 주세요.'); return; }
 
   const body = [
     'EETO 고객센터 문의',
@@ -2637,6 +2657,7 @@ async function submitCustomerServiceInquiry() {
     `업체명: ${company}`,
     `담당자: ${name}`,
     `연락처: ${phone}`,
+    `이메일: ${email}`,
     `주소: ${address}`,
     '',
     '[문의 내용]',
@@ -2667,7 +2688,7 @@ async function submitCustomerServiceInquiry() {
 }
 
 function openRepairModal() {
-  ['rp-brand', 'rp-name', 'rp-phone', 'rp-company', 'rp-address', 'rp-message'].forEach(id => {
+  ['rp-brand', 'rp-name', 'rp-phone', 'rp-email', 'rp-company', 'rp-address', 'rp-message'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('repair-modal').classList.add('open');
@@ -2683,13 +2704,15 @@ async function submitRepairInquiry() {
   const brand = document.getElementById('rp-brand').value.trim();
   const name = document.getElementById('rp-name').value.trim();
   const phone = document.getElementById('rp-phone').value.trim();
+  const email = document.getElementById('rp-email').value.trim();
   const company = document.getElementById('rp-company').value.trim() || '(미입력)';
   const address = document.getElementById('rp-address').value.trim() || '(미입력)';
   const message = document.getElementById('rp-message').value.trim();
 
   if (!brand) { alert('장비 브랜드를 입력해 주세요.'); return; }
   if (!message) { alert('고장 내용을 입력해 주세요.'); return; }
-  if (!name || !phone) { alert('성함과 연락처를 입력해 주세요.'); return; }
+  if (!name || !phone || !email) { alert('성함, 연락처, 이메일을 입력해 주세요.'); return; }
+  if (!isValidEmail(email)) { alert('올바른 이메일 주소를 입력해 주세요.'); return; }
 
   const body = [
     'EETO FLEX 타사 장비 수리 문의',
@@ -2697,6 +2720,7 @@ async function submitRepairInquiry() {
     `장비 브랜드: ${brand}`,
     `담당자: ${name}`,
     `연락처: ${phone}`,
+    `이메일: ${email}`,
     `회사명: ${company}`,
     `회사 주소: ${address}`,
     '',
@@ -2732,6 +2756,7 @@ function openVisitModal() {
   document.getElementById('vt-company').value = '';
   document.getElementById('vt-name').value = '';
   document.getElementById('vt-phone').value = '';
+  document.getElementById('vt-email').value = '';
   document.getElementById('vt-address').value = '';
   document.getElementById('vt-message').value = '';
   document.getElementById('visit-modal').classList.add('open');
@@ -2747,13 +2772,15 @@ async function submitVisitRequest() {
   const company = document.getElementById('vt-company').value.trim();
   const name = document.getElementById('vt-name').value.trim();
   const phone = document.getElementById('vt-phone').value.trim();
+  const email = document.getElementById('vt-email').value.trim();
   const address = document.getElementById('vt-address').value.trim();
   const message = document.getElementById('vt-message').value.trim() || '(없음)';
 
-  if (!company || !name || !phone || !address) {
-    alert('회사명, 담당자 이름, 연락처, 주소를 모두 입력해 주세요.');
+  if (!company || !name || !phone || !email || !address) {
+    alert('회사명, 담당자 이름, 연락처, 이메일, 주소를 모두 입력해 주세요.');
     return;
   }
+  if (!isValidEmail(email)) { alert('올바른 이메일 주소를 입력해 주세요.'); return; }
 
   const body = [
     'EETO FLEX 방문 요청',
@@ -2762,6 +2789,7 @@ async function submitVisitRequest() {
     `회사명: ${company}`,
     `담당자: ${name}`,
     `연락처: ${phone}`,
+    `이메일: ${email}`,
     `방문 주소: ${address}`,
     '',
     `문의 내용: ${message}`
