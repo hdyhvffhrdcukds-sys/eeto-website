@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hdyhvffhrdcukds-sys.github.io/eeto-website/sitemap.xml
