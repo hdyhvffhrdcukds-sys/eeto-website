@@ -30,6 +30,8 @@ export default {
         response = await revokeActivation(request, env, url.pathname.split("/")[4]);
       else if (request.method === "POST" && /^\/v1\/admin\/licenses\/[^/]+\/status$/.test(url.pathname))
         response = await setLicenseStatus(request, env, url.pathname.split("/")[4]);
+      else if (request.method === "POST" && /^\/v1\/admin\/licenses\/[^/]+\/update$/.test(url.pathname))
+        response = await updateLicense(request, env, url.pathname.split("/")[4]);
       else response = error(404, "not_found", "요청한 주소가 없습니다.");
 
       return withHeaders(response, headers);
@@ -157,6 +159,18 @@ async function setLicenseStatus(request, env, licenseId) {
   if (!result.meta.changes) return error(404, "license_not_found", "라이선스를 찾을 수 없습니다.");
   await audit(env, licenseId, enabled ? "enable_license" : "disable_license", "");
   return json({ ok: true, enabled });
+}
+
+async function updateLicense(request, env, licenseId) {
+  requireAdmin(request, env);
+  const body = await readJson(request);
+  const expiresAt = optionalDate(body.expiresAt);
+  const maxDevices = integer(body.maxDevices, "maxDevices", 1, 50);
+  const result = await env.DB.prepare("UPDATE licenses SET expires_at = ?, max_devices = ?, updated_at = ? WHERE id = ?")
+    .bind(expiresAt, maxDevices, isoNow(), licenseId).run();
+  if (!result.meta.changes) return error(404, "license_not_found", "라이선스를 찾을 수 없습니다.");
+  await audit(env, licenseId, "update_license", `expiresAt=${expiresAt ?? "none"};maxDevices=${maxDevices}`);
+  return json({ ok: true, expiresAt, maxDevices });
 }
 
 function leaseResponse(license, activationToken, now, env) {
