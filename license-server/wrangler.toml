@@ -9,7 +9,7 @@ database_name = "eeto-miracle-license-db"
 database_id = "37c1cb01-91de-4c7a-93db-db0359019b10"
 
 [vars]
-# 실제 홈페이지 주소만 허용합니다. 배포 전 변경하세요.
-CORS_ORIGIN = "https://REPLACE_WITH_YOUR_DOMAIN"
+# 라이선스 발급 관리 화면을 제공하는 공식 홈페이지 주소입니다.
+CORS_ORIGIN = "https://hdyhvffhrdcukds-sys.github.io"
 # 프로그램은 만료 전 이 시간마다 서버 확인이 필요합니다.
 LEASE_DAYS = "7"
