@@ -1,0 +1,33 @@
+name: Deploy MIRACLE license server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "license-server/**"
+      - ".github/workflows/deploy-miracle-license.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get source
+        uses: actions/checkout@v4
+
+      - name: Create or update the license database tables
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: license-server
+          command: d1 execute eeto-miracle-license-db --remote --file=schema.sql
+
+      - name: Deploy the license server
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: license-server
+          command: deploy
