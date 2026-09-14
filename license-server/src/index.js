@@ -119,9 +119,9 @@ async function createLicense(request, env) {
   const id = crypto.randomUUID();
   try {
     await env.DB.prepare(`INSERT INTO licenses
-      (id, key_hash, key_suffix, customer_name, max_devices, expires_at, enabled, features_json, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`)
-      .bind(id, await sha256(licenseKey), licenseKey.slice(-5), customerName, maxDevices, expiresAt,
+      (id, key_hash, key_value, key_suffix, customer_name, max_devices, expires_at, enabled, features_json, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`)
+      .bind(id, await sha256(licenseKey), licenseKey, licenseKey.slice(-5), customerName, maxDevices, expiresAt,
         JSON.stringify(features), now, now).run();
   } catch {
     return error(409, "duplicate_key", "이미 등록된 라이선스 키입니다.");
@@ -132,7 +132,7 @@ async function createLicense(request, env) {
 
 async function listLicenses(request, env) {
   requireAdmin(request, env);
-  const results = await env.DB.prepare(`SELECT l.id, l.key_suffix, l.customer_name, l.max_devices, l.expires_at, l.enabled,
+  const results = await env.DB.prepare(`SELECT l.id, l.key_value, l.key_suffix, l.customer_name, l.max_devices, l.expires_at, l.enabled,
       l.features_json, l.created_at, l.updated_at,
       SUM(CASE WHEN a.revoked_at IS NULL THEN 1 ELSE 0 END) AS active_devices
       FROM licenses l LEFT JOIN activations a ON a.license_id = l.id GROUP BY l.id ORDER BY l.created_at DESC LIMIT 500`).all();

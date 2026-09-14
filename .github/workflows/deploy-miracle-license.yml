@@ -25,6 +25,13 @@ jobs:
           workingDirectory: license-server
           command: d1 execute eeto-miracle-license-db --remote --file=schema.sql
 
+      - name: Apply license database migrations
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: license-server
+          command: d1 migrations apply eeto-miracle-license-db --remote
+
       - name: Deploy the license server
         uses: cloudflare/wrangler-action@v3
         with:
