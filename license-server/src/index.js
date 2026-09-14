@@ -32,6 +32,8 @@ export default {
         response = await setLicenseStatus(request, env, url.pathname.split("/")[4]);
       else if (request.method === "POST" && /^\/v1\/admin\/licenses\/[^/]+\/update$/.test(url.pathname))
         response = await updateLicense(request, env, url.pathname.split("/")[4]);
+      else if (request.method === "DELETE" && /^\/v1\/admin\/licenses\/[^/]+$/.test(url.pathname))
+        response = await deleteLicense(request, env, url.pathname.split("/")[4]);
       else response = error(404, "not_found", "요청한 주소가 없습니다.");
 
       return withHeaders(response, headers);
@@ -173,6 +175,19 @@ async function updateLicense(request, env, licenseId) {
   return json({ ok: true, expiresAt, maxDevices });
 }
 
+async function deleteLicense(request, env, licenseId) {
+  requireAdmin(request, env);
+  const license = await env.DB.prepare("SELECT id FROM licenses WHERE id = ?").bind(licenseId).first();
+  if (!license) return error(404, "license_not_found", "라이선스를 찾을 수 없습니다.");
+
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM activations WHERE license_id = ?").bind(licenseId),
+    env.DB.prepare("DELETE FROM audit_log WHERE license_id = ?").bind(licenseId),
+    env.DB.prepare("DELETE FROM licenses WHERE id = ?").bind(licenseId)
+  ]);
+  return json({ ok: true });
+}
+
 function leaseResponse(license, activationToken, now, env) {
   const until = new Date(new Date(now).getTime() + leaseDays(env) * 86_400_000);
   const licenseEnd = license.expires_at ? new Date(license.expires_at) : null;
@@ -211,7 +226,7 @@ function base64Url(bytes) { let s = ""; for (const b of bytes) s += String.fromC
 async function sha256(value) { const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)); return [...new Uint8Array(hash)].map(x => x.toString(16).padStart(2, "0")).join(""); }
 function timingSafeEqual(a, b) { if (a.length !== b.length) return false; let diff = 0; for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i); return diff === 0; }
 async function audit(env, licenseId, action, detail) { await env.DB.prepare("INSERT INTO audit_log (id, license_id, action, detail, created_at) VALUES (?, ?, ?, ?, ?)").bind(crypto.randomUUID(), licenseId, action, detail, isoNow()).run(); }
-function corsHeaders(request, env) { const origin = request.headers.get("origin"); return origin && origin === env.CORS_ORIGIN ? { ...JSON_HEADERS, "access-control-allow-origin": origin, "access-control-allow-headers": "content-type, x-admin-key", "access-control-allow-methods": "GET, POST, OPTIONS", "vary": "Origin" } : JSON_HEADERS; }
+function corsHeaders(request, env) { const origin = request.headers.get("origin"); return origin && origin === env.CORS_ORIGIN ? { ...JSON_HEADERS, "access-control-allow-origin": origin, "access-control-allow-headers": "content-type, x-admin-key", "access-control-allow-methods": "GET, POST, DELETE, OPTIONS", "vary": "Origin" } : JSON_HEADERS; }
 function json(data, status = 200) { return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS }); }
 function error(status, code, message) { return json({ ok: false, code, message }, status); }
 function withHeaders(response, headers) { const result = new Headers(response.headers); for (const [key, value] of Object.entries(headers)) result.set(key, value); return new Response(response.body, { status: response.status, headers: result }); }
