@@ -56,7 +56,24 @@ $('changeKey').onclick=async()=>{
   }catch(e){$('keyChangeStatus').textContent=e.message+' 응답이 끊겼다면 보관한 새 키로 접속을 확인하세요.'}
   finally{controls.forEach(id=>$(id).disabled=false)}
 };
-async function refresh(){const version=++requestVersion;try{$('refresh').disabled=true;const data=await call(API);if(version!==requestVersion)return;list.innerHTML=data.licenses.map(x=>`<article class="license"><div><strong>${escape(x.customer_name)}</strong> <span class="badge">${x.enabled?'사용':'중지'}</span><div class="note">라이선스 번호: ${escape(x.key_value||`기존 발급본 · 끝 ${x.key_suffix}`)} · PC ${x.active_devices}/${x.max_devices} · 만료 ${stamp(x.expires_at)}</div></div><div><button class="alt" data-edit="${x.id}" data-expiry="${x.expires_at||''}" data-devices="${x.max_devices}">기간·PC 수정</button> <button class="danger" data-id="${x.id}" data-enabled="${x.enabled?0:1}">${x.enabled?'중지':'재활성화'}</button> <button class="danger" data-delete="${x.id}" data-name="${escape(x.customer_name)}">삭제</button></div></article>`).join('')||'<p class="note">등록된 라이선스가 없습니다.</p>';}catch(e){if(version===requestVersion){list.textContent='';show(e.message)}}finally{if(version===requestVersion)$('refresh').disabled=false}}
+async function refresh(){const version=++requestVersion;try{$('refresh').disabled=true;const data=await call(API);if(version!==requestVersion)return;list.innerHTML=data.licenses.map(x=>`<article class="license"><div><strong>${escape(x.customer_name)}</strong> <span class="badge">${x.enabled?'사용':'중지'}</span><div class="note">라이선스 번호: ${escape(x.key_value||`기존 발급본 · 끝 ${x.key_suffix}`)} · PC ${x.active_devices}/${x.max_devices} · 만료 ${stamp(x.expires_at)}</div></div><div><button class="alt" data-edit="${x.id}" data-expiry="${x.expires_at||''}" data-devices="${x.max_devices}">기간·PC 수정</button> <label style="display:inline-flex;align-items:center;gap:6px;margin:0 10px"><input type="checkbox" data-permanent="${x.id}" ${x.expires_at?'':'checked'} aria-label="영구락">영구락</label> <button class="danger" data-id="${x.id}" data-enabled="${x.enabled?0:1}">${x.enabled?'중지':'재활성화'}</button> <button class="danger" data-delete="${x.id}" data-name="${escape(x.customer_name)}">삭제</button></div></article>`).join('')||'<p class="note">등록된 라이선스가 없습니다.</p>';}catch(e){if(version===requestVersion){list.textContent='';show(e.message)}}finally{if(version===requestVersion)$('refresh').disabled=false}}
+list.addEventListener('change',async e=>{
+  const box=e.target.closest('input[data-permanent]');if(!box)return;
+  const permanent=box.checked;let expiresAt=null;
+  if(permanent){if(!confirm('이 업체의 만료일을 없애고 영구 사용으로 변경할까요? 허용 PC 수와 사용 중지 상태는 유지됩니다.')){box.checked=false;return}}
+  else{
+    const date=prompt('영구락 해제 후 적용할 만료일을 입력하세요. (YYYY-MM-DD, 한국시간 해당 날짜 끝까지)');
+    if(date===null){box.checked=true;return}
+    const parsed=new Date(date+'T23:59:59+09:00');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(parsed.getTime())||new Date(date+'T00:00:00Z').toISOString().slice(0,10)!==date||parsed.getTime()<=Date.now()){
+      box.checked=true;show('미래의 올바른 만료일을 입력하세요.');return;
+    }
+    expiresAt=parsed.toISOString();
+  }
+  try{box.disabled=true;await call(`${API}/${box.dataset.permanent}/permanent`,{method:'POST',body:JSON.stringify({permanent,expiresAt})});show(permanent?'영구락 적용 완료 · 만료일 없음':'영구락 해제 완료 · 만료일 지정');await refresh()}
+  catch(error){box.checked=!permanent;show(error.message+' 목록을 새로고침해 저장 상태를 확인하세요.')}
+  finally{box.disabled=false}
+});
 $('refresh').onclick=()=>{clearTimeout(lookupTimer);out.classList.add('hidden');refresh()};
 $('adminKey').addEventListener('input',()=>{clearTimeout(lookupTimer);requestVersion++;list.textContent='';out.textContent='';out.classList.add('hidden');$('refresh').disabled=false;if(key())lookupTimer=setTimeout(refresh,900)});
 $('adminKey').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('refresh').onclick()}});

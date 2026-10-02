@@ -24,6 +24,8 @@ export default {
         response = await check(request, env);
       else if (request.method === "POST" && url.pathname === "/v1/admin/key")
         response = await changeAdminKey(request, env);
+      else if (request.method === "POST" && /^\/v1\/admin\/licenses\/[^/]+\/permanent$/.test(url.pathname))
+        response = await setPermanentLicense(request, env, url.pathname.split("/")[4]);
       else if (request.method === "POST" && url.pathname === "/v1/admin/licenses")
         response = await createLicense(request, env);
       else if (request.method === "GET" && url.pathname === "/v1/admin/licenses")
@@ -163,6 +165,20 @@ async function setLicenseStatus(request, env, licenseId) {
   if (!result.meta.changes) return error(404, "license_not_found", "라이선스를 찾을 수 없습니다.");
   await audit(env, licenseId, enabled ? "enable_license" : "disable_license", "");
   return json({ ok: true, enabled });
+}
+
+async function setPermanentLicense(request, env, licenseId) {
+  await requireAdmin(request, env);
+  const body = await readJson(request);
+  if (typeof body.permanent !== 'boolean') throw new HttpError(400, 'invalid_permanent', '영구락 설정을 확인하세요.');
+  const expiresAt = body.permanent ? null : optionalDate(body.expiresAt);
+  if (!body.permanent && (!expiresAt || isExpired(expiresAt)))
+    throw new HttpError(400, 'invalid_expiresAt', '영구락 해제 시 미래의 만료일을 지정하세요.');
+  const result = await env.DB.prepare('UPDATE licenses SET expires_at = ?, updated_at = ? WHERE id = ?')
+    .bind(expiresAt, isoNow(), licenseId).run();
+  if (!result.meta.changes) return error(404, 'license_not_found', '라이선스를 찾을 수 없습니다.');
+  await audit(env, licenseId, 'set_permanent', body.permanent ? 'permanent' : expiresAt);
+  return json({ ok: true, permanent: body.permanent, expiresAt });
 }
 
 async function updateLicense(request, env, licenseId) {
