@@ -16,7 +16,7 @@
     <div class="wide"><button class="alt" id="openKeyChange">관리자 키 변경</button></div>
     <div class="wide hidden" id="keyChangePanel">
       <p class="note">위에 현재 관리자 키를 입력하세요. 변경 후 이전 키는 사용할 수 없습니다. 고객 라이선스는 유지됩니다.</p>
-      <label>새 관리자 키 <input id="newAdminKey" type="password" autocomplete="new-password" minlength="20" maxlength="128"></label>
+      <label>새 관리자 키 <input id="newAdminKey" type="password" autocomplete="new-password" minlength="12" maxlength="128" placeholder="12자 이상 입력"></label>
       <label>새 관리자 키 확인 <input id="confirmAdminKey" type="password" autocomplete="new-password" maxlength="128"></label>
       <p><button type="button" class="alt" id="generateKey">안전한 키 자동 생성</button> <button type="button" class="alt" id="showNewKey">새 키 보기</button></p>
       <label><span><input id="keySaved" type="checkbox"> 새 키를 비밀번호 관리자 등 안전한 곳에 보관했습니다.</span></label>
@@ -45,7 +45,7 @@ $('generateKey').onclick=()=>{const bytes=crypto.getRandomValues(new Uint8Array(
 $('showNewKey').onclick=()=>{const visible=$('newAdminKey').type==='password';$('newAdminKey').type=visible?'text':'password';$('showNewKey').textContent=visible?'새 키 숨기기':'새 키 보기'};
 $('changeKey').onclick=async()=>{
   const next=$('newAdminKey').value;
-  if(!/^[!-~]{20,128}$/.test(next)){$('keyChangeStatus').textContent='공백 없이 영문·숫자·기호 20~128자를 입력하세요.';return}
+  if(!/^[!-~]{12,128}$/.test(next)){$('keyChangeStatus').textContent='공백 없이 영문·숫자·기호 12~128자를 입력하세요.';return}
   if(next!==$('confirmAdminKey').value){$('keyChangeStatus').textContent='새 키와 확인 값이 다릅니다.';return}
   if(!$('keySaved').checked){$('keyChangeStatus').textContent='새 키를 보관한 뒤 확인란을 선택하세요.';return}
   if(!confirm('관리자 키를 변경할까요? 이전 키는 즉시 사용할 수 없게 됩니다.'))return;

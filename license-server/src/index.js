@@ -234,7 +234,7 @@ async function changeAdminKey(request, env) {
   const auth = await requireAdmin(request, env);
   const body = await readJson(request);
   const next = requiredString(body.newKey, "newKey", 128);
-  if (!/^[!-~]{20,128}$/.test(next)) throw new HttpError(400, "weak_key", "새 키는 공백 없이 영문·숫자·기호 20~128자로 입력하세요. 안전한 키 자동 생성을 권장합니다.");
+  if (!/^[!-~]{12,128}$/.test(next)) throw new HttpError(400, "weak_key", "새 키는 공백 없이 영문·숫자·기호 12~128자로 입력하세요. 안전한 키 자동 생성을 권장합니다.");
   if (next !== body.confirmKey) throw new HttpError(400, "key_mismatch", "새 키와 확인 값이 다릅니다.");
   const hash = await sha256(next);
   if (hash === auth.expected || hash === auth.bootstrap) throw new HttpError(400, "same_key", "기존 키와 다른 새 키를 입력하세요.");
