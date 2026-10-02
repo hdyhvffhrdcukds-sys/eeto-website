@@ -22,6 +22,8 @@ export default {
         response = await activate(request, env);
       else if (request.method === "POST" && url.pathname === "/v1/check")
         response = await check(request, env);
+      else if (request.method === "POST" && url.pathname === "/v1/admin/key")
+        response = await changeAdminKey(request, env);
       else if (request.method === "POST" && url.pathname === "/v1/admin/licenses")
         response = await createLicense(request, env);
       else if (request.method === "GET" && url.pathname === "/v1/admin/licenses")
@@ -110,7 +112,7 @@ async function check(request, env) {
 }
 
 async function createLicense(request, env) {
-  requireAdmin(request, env);
+  await requireAdmin(request, env);
   const body = await readJson(request);
   const customerName = requiredString(body.customerName, "customerName", 120);
   const maxDevices = integer(body.maxDevices ?? 1, "maxDevices", 1, 50);
@@ -133,7 +135,7 @@ async function createLicense(request, env) {
 }
 
 async function listLicenses(request, env) {
-  requireAdmin(request, env);
+  await requireAdmin(request, env);
   const results = await env.DB.prepare(`SELECT l.id, l.key_value, l.key_suffix, l.customer_name, l.max_devices, l.expires_at, l.enabled,
       l.features_json, l.created_at, l.updated_at,
       SUM(CASE WHEN a.revoked_at IS NULL THEN 1 ELSE 0 END) AS active_devices
@@ -142,7 +144,7 @@ async function listLicenses(request, env) {
 }
 
 async function revokeActivation(request, env, licenseId) {
-  requireAdmin(request, env);
+  await requireAdmin(request, env);
   const body = await readJson(request);
   const activationId = requiredString(body.activationId, "activationId", 64);
   const result = await env.DB.prepare("UPDATE activations SET revoked_at = ? WHERE id = ? AND license_id = ? AND revoked_at IS NULL")
@@ -153,7 +155,7 @@ async function revokeActivation(request, env, licenseId) {
 }
 
 async function setLicenseStatus(request, env, licenseId) {
-  requireAdmin(request, env);
+  await requireAdmin(request, env);
   const body = await readJson(request);
   const enabled = body.enabled === true;
   const result = await env.DB.prepare("UPDATE licenses SET enabled = ?, updated_at = ? WHERE id = ?")
@@ -164,7 +166,7 @@ async function setLicenseStatus(request, env, licenseId) {
 }
 
 async function updateLicense(request, env, licenseId) {
-  requireAdmin(request, env);
+  await requireAdmin(request, env);
   const body = await readJson(request);
   const expiresAt = optionalDate(body.expiresAt);
   const maxDevices = integer(body.maxDevices, "maxDevices", 1, 50);
@@ -176,7 +178,7 @@ async function updateLicense(request, env, licenseId) {
 }
 
 async function deleteLicense(request, env, licenseId) {
-  requireAdmin(request, env);
+  await requireAdmin(request, env);
   const license = await env.DB.prepare("SELECT id FROM licenses WHERE id = ?").bind(licenseId).first();
   if (!license) return error(404, "license_not_found", "라이선스를 찾을 수 없습니다.");
 
@@ -202,9 +204,31 @@ function leaseResponse(license, activationToken, now, env) {
   };
 }
 
-function requireAdmin(request, env) {
+async function requireAdmin(request, env) {
   const key = request.headers.get("x-admin-key");
-  if (!env.ADMIN_API_KEY || !key || !timingSafeEqual(key, env.ADMIN_API_KEY)) throw new HttpError(401, "admin_unauthorized", "관리자 인증이 필요합니다.");
+  if (!env.ADMIN_API_KEY || !key || key.length > 256) throw new HttpError(401, "admin_unauthorized", "관리자 인증이 필요합니다.");
+  // Changing the Cloudflare secret remains an out-of-band recovery mechanism.
+  const bootstrap = await sha256(env.ADMIN_API_KEY);
+  const saved = await env.DB.prepare("SELECT key_hash FROM admin_credentials WHERE id = 1 AND bootstrap_hash = ?").bind(bootstrap).first();
+  const expected = saved?.key_hash ?? bootstrap;
+  if (!timingSafeEqual(await sha256(key), expected)) throw new HttpError(401, "admin_unauthorized", "관리자 인증이 필요합니다.");
+  return { bootstrap, expected };
+}
+async function changeAdminKey(request, env) {
+  const auth = await requireAdmin(request, env);
+  const body = await readJson(request);
+  const next = requiredString(body.newKey, "newKey", 128);
+  if (!/^[!-~]{20,128}$/.test(next)) throw new HttpError(400, "weak_key", "새 키는 공백 없이 영문·숫자·기호 20~128자로 입력하세요. 안전한 키 자동 생성을 권장합니다.");
+  if (next !== body.confirmKey) throw new HttpError(400, "key_mismatch", "새 키와 확인 값이 다릅니다.");
+  const hash = await sha256(next);
+  if (hash === auth.expected || hash === auth.bootstrap) throw new HttpError(400, "same_key", "기존 키와 다른 새 키를 입력하세요.");
+  const result = await env.DB.prepare(`INSERT INTO admin_credentials(id, bootstrap_hash, key_hash, updated_at)
+    VALUES (1, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET bootstrap_hash=excluded.bootstrap_hash,
+    key_hash=excluded.key_hash, updated_at=excluded.updated_at
+    WHERE admin_credentials.bootstrap_hash != excluded.bootstrap_hash OR admin_credentials.key_hash = ?`)
+    .bind(auth.bootstrap, hash, isoNow(), auth.expected).run();
+  if (!result.meta.changes) throw new HttpError(409, "key_changed", "다른 화면에서 키가 변경되었습니다. 현재 키로 다시 로그인하세요.");
+  return json({ ok: true });
 }
 async function readJson(request) {
   const size = Number(request.headers.get("content-length") ?? 0);
