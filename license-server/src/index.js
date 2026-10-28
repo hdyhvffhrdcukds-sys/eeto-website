@@ -7,6 +7,10 @@
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 const LICENSE_KEY_PREFIX = "MIR";
 const MAX_BODY_BYTES = 16_384;
+function requireSession(body) {
+  if (body.protocolVersion !== 2) throw new HttpError(426, "client_update_required", "동시 사용 인증을 지원하는 최신 미라클로 업데이트해 주세요.");
+  return requiredString(body.sessionId, "sessionId", 128);
+}
 
 export default {
   async fetch(request, env) {
@@ -22,6 +26,8 @@ export default {
         response = await activate(request, env);
       else if (request.method === "POST" && url.pathname === "/v1/check")
         response = await check(request, env);
+      else if (request.method === "POST" && url.pathname === "/v1/release")
+        response = await releaseSession(request, env);
       else if (request.method === "POST" && url.pathname === "/v1/admin/key")
         response = await changeAdminKey(request, env);
       else if (request.method === "POST" && /^\/v1\/admin\/licenses\/[^/]+\/permanent$/.test(url.pathname))
@@ -30,6 +36,10 @@ export default {
         response = await createLicense(request, env);
       else if (request.method === "GET" && url.pathname === "/v1/admin/licenses")
         response = await listLicenses(request, env);
+      else if (request.method === "GET" && /^\/v1\/admin\/licenses\/[^/]+\/sessions$/.test(url.pathname))
+        response = await listSessions(request, env, url.pathname.split("/")[4]);
+      else if (request.method === "POST" && /^\/v1\/admin\/licenses\/[^/]+\/release-device$/.test(url.pathname))
+        response = await releaseDevice(request, env, url.pathname.split("/")[4]);
       else if (request.method === "POST" && /^\/v1\/admin\/licenses\/[^/]+\/revoke$/.test(url.pathname))
         response = await revokeActivation(request, env, url.pathname.split("/")[4]);
       else if (request.method === "POST" && /^\/v1\/admin\/licenses\/[^/]+\/status$/.test(url.pathname))
@@ -52,6 +62,7 @@ export default {
 
 async function activate(request, env) {
   const body = await readJson(request);
+  const sessionId = requireSession(body);
   const licenseKey = requiredString(body.licenseKey, "licenseKey", 128).toUpperCase();
   const deviceId = requiredString(body.deviceId, "deviceId", 256);
   const deviceLabel = requiredString(body.deviceLabel ?? "MIRACLE PC", "deviceLabel", 100);
@@ -65,37 +76,26 @@ async function activate(request, env) {
   if (!license || !license.enabled || isExpired(license.expires_at))
     return error(403, "license_unavailable", "사용할 수 없는 라이선스입니다.");
 
-  let activation = await env.DB.prepare(
-    "SELECT id, token_hash, revoked_at FROM activations WHERE license_id = ? AND device_hash = ?"
-  ).bind(license.id, deviceHash).first();
-
-  if (activation?.revoked_at) activation = null;
-  if (!activation) {
-    const count = await env.DB.prepare(
-      "SELECT COUNT(*) AS count FROM activations WHERE license_id = ? AND revoked_at IS NULL"
-    ).bind(license.id).first();
-    if (Number(count.count) >= Number(license.max_devices))
-      return error(409, "device_limit", "허용된 PC 수를 모두 사용 중입니다. 관리자에게 기존 PC 해제를 요청하세요.");
-
-    const token = randomToken();
-    activation = { id: crypto.randomUUID(), token_hash: await sha256(token) };
-    await env.DB.prepare(
-      "INSERT INTO activations (id, license_id, device_hash, device_label, token_hash, activated_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    ).bind(activation.id, license.id, deviceHash, deviceLabel, activation.token_hash, now, now).run();
-    await audit(env, license.id, "activate", deviceLabel);
-    return json(leaseResponse(license, token, now, env));
-  }
-
   const token = randomToken();
   const tokenHash = await sha256(token);
-  await env.DB.prepare("UPDATE activations SET token_hash = ?, device_label = ?, last_seen_at = ? WHERE id = ?")
-    .bind(tokenHash, deviceLabel, now, activation.id).run();
-  await audit(env, license.id, "renew_activation", deviceLabel);
-  return json(leaseResponse(license, token, now, env));
+  // Registration is not a concurrent usage slot.
+  const result = await env.DB.prepare(`INSERT INTO activations
+      (id, license_id, device_hash, device_label, token_hash, activated_at, last_seen_at)
+      SELECT ?, l.id, ?, ?, ?, ?, ? FROM licenses l
+      WHERE l.id = ? AND l.enabled = 1 AND (l.expires_at IS NULL OR l.expires_at > ?)
+      ON CONFLICT(license_id, device_hash) DO UPDATE SET
+        device_label = excluded.device_label, token_hash = excluded.token_hash,
+        last_seen_at = excluded.last_seen_at, revoked_at = NULL
+      WHERE NOT EXISTS (SELECT 1 FROM license_sessions s WHERE s.activation_id=activations.id AND s.released_at IS NULL)`)
+    .bind(crypto.randomUUID(), deviceHash, deviceLabel, tokenHash, now, now, license.id, now).run();
+  if (!result.meta.changes) return error(409, "device_in_use", "이 PC의 미라클이 이미 사용 중이거나 라이선스를 사용할 수 없습니다. 기존 프로그램을 종료하거나 관리자에게 사용 해제를 요청하세요.");
+  return check(new Request(request.url, {method:"POST", headers:{"content-type":"application/json"},
+    body:JSON.stringify({activationToken:token,deviceId,sessionId,protocolVersion:2,purpose:"startup"})}), env);
 }
 
 async function check(request, env) {
   const body = await readJson(request);
+  const sessionId = requireSession(body);
   const activationToken = requiredString(body.activationToken, "activationToken", 256);
   const deviceId = requiredString(body.deviceId, "deviceId", 256);
   const tokenHash = await sha256(activationToken);
@@ -109,8 +109,58 @@ async function check(request, env) {
     return error(403, "activation_unavailable", "활성화가 유효하지 않습니다.");
 
   const now = isoNow();
+  const sessionHash = await sha256(sessionId);
+  if (body.purpose === "nc-export") {
+    const session=await env.DB.prepare("SELECT activation_id FROM license_sessions WHERE session_hash=? AND activation_id=? AND released_at IS NULL")
+      .bind(sessionHash,activation.id).first();
+    if (!session) return error(403,"session_released","이 PC의 사용권이 해제되었습니다. 작업을 저장한 뒤 미라클을 다시 실행하세요. NC는 내보내지 않았습니다.");
+  } else if (body.purpose === "startup") {
+    // No timer/expiry: a silent PC may still be working. Only exit or an explicit
+    // administrator release returns the slot. Tombstones fence stale NC requests.
+    const acquired = await env.DB.prepare(`INSERT INTO license_sessions(session_hash,activation_id,created_at)
+      SELECT ?, a.id, ? FROM activations a JOIN licenses l ON l.id=a.license_id
+      WHERE a.id=? AND a.token_hash=? AND a.revoked_at IS NULL AND l.enabled=1
+        AND (l.expires_at IS NULL OR l.expires_at>?)
+        AND (EXISTS(SELECT 1 FROM license_sessions s WHERE s.activation_id=a.id AND s.released_at IS NULL)
+          OR (SELECT COUNT(DISTINCT s.activation_id) FROM license_sessions s
+            JOIN activations other ON other.id=s.activation_id
+            WHERE other.license_id=l.id AND other.revoked_at IS NULL AND s.released_at IS NULL) < l.max_devices)
+      ON CONFLICT(session_hash) DO UPDATE SET session_hash=excluded.session_hash
+        WHERE license_sessions.activation_id=excluded.activation_id AND license_sessions.released_at IS NULL`)
+      .bind(sessionHash, now, activation.id, tokenHash, now).run();
+    if (!acquired.meta.changes)
+      return error(409, "concurrent_limit", "다른 PC에서 미라클을 사용 중입니다. 허용된 동시 사용 대수를 모두 사용 중이므로 해당 PC에서 종료한 뒤 다시 실행하세요. 비정상 종료한 경우 관리자에게 사용 해제를 요청하세요.");
+  } else return error(400,"invalid_purpose","인증 요청 종류를 확인하세요.");
   await env.DB.prepare("UPDATE activations SET last_seen_at = ? WHERE id = ?").bind(now, activation.id).run();
-  return json(leaseResponse(activation, activationToken, now, env));
+  return json({...leaseResponse(activation, activationToken, now, env), protocolVersion:2, sessionConfirmed:true});
+}
+
+async function releaseSession(request, env) {
+  const body=await readJson(request);
+  const sessionHash=await sha256(requireSession(body));
+  const tokenHash=await sha256(requiredString(body.activationToken,"activationToken",256));
+  const deviceHash=await sha256(requiredString(body.deviceId,"deviceId",256));
+  await env.DB.prepare(`UPDATE license_sessions SET released_at=? WHERE session_hash=? AND activation_id IN
+    (SELECT id FROM activations WHERE token_hash=? AND device_hash=?)`).bind(isoNow(),sessionHash,tokenHash,deviceHash).run();
+  return json({ok:true});
+}
+
+async function listSessions(request, env, licenseId) {
+  await requireAdmin(request,env);
+  const rows=await env.DB.prepare(`SELECT a.id AS activation_id,a.device_label,MIN(s.created_at) AS started_at
+    FROM activations a JOIN license_sessions s ON s.activation_id=a.id
+    WHERE a.license_id=? AND a.revoked_at IS NULL AND s.released_at IS NULL GROUP BY a.id`).bind(licenseId).all();
+  return json({sessions:rows.results});
+}
+
+async function releaseDevice(request, env, licenseId) {
+  await requireAdmin(request,env);
+  const body=await readJson(request);
+  const id=requiredString(body.activationId,"activationId",64);
+  const result=await env.DB.prepare(`UPDATE license_sessions SET released_at=? WHERE released_at IS NULL
+    AND activation_id IN (SELECT id FROM activations WHERE id=? AND license_id=?)`).bind(isoNow(),id,licenseId).run();
+  await audit(env,licenseId,"release_device",id);
+  return json({ok:true,released:result.meta.changes});
 }
 
 async function createLicense(request, env) {
@@ -140,8 +190,9 @@ async function listLicenses(request, env) {
   await requireAdmin(request, env);
   const results = await env.DB.prepare(`SELECT l.id, l.key_value, l.key_suffix, l.customer_name, l.max_devices, l.expires_at, l.enabled,
       l.features_json, l.created_at, l.updated_at,
-      SUM(CASE WHEN a.revoked_at IS NULL THEN 1 ELSE 0 END) AS active_devices
-      FROM licenses l LEFT JOIN activations a ON a.license_id = l.id GROUP BY l.id ORDER BY l.created_at DESC LIMIT 500`).all();
+      COUNT(DISTINCT CASE WHEN a.revoked_at IS NULL AND s.released_at IS NULL AND s.session_hash IS NOT NULL THEN a.id END) AS active_devices,
+      COUNT(DISTINCT CASE WHEN a.revoked_at IS NULL THEN a.id END) AS registered_devices
+      FROM licenses l LEFT JOIN activations a ON a.license_id = l.id LEFT JOIN license_sessions s ON s.activation_id=a.id GROUP BY l.id ORDER BY l.created_at DESC LIMIT 500`).all();
   return json({ licenses: results.results.map(x => ({ ...x, features: JSON.parse(x.features_json) })) });
 }
 
@@ -152,6 +203,8 @@ async function revokeActivation(request, env, licenseId) {
   const result = await env.DB.prepare("UPDATE activations SET revoked_at = ? WHERE id = ? AND license_id = ? AND revoked_at IS NULL")
     .bind(isoNow(), activationId, licenseId).run();
   if (!result.meta.changes) return error(404, "activation_not_found", "활성화를 찾을 수 없습니다.");
+  await env.DB.prepare("UPDATE license_sessions SET released_at=? WHERE activation_id=? AND released_at IS NULL")
+    .bind(isoNow(),activationId).run();
   await audit(env, licenseId, "revoke_activation", activationId);
   return json({ ok: true });
 }
@@ -186,9 +239,16 @@ async function updateLicense(request, env, licenseId) {
   const body = await readJson(request);
   const expiresAt = optionalDate(body.expiresAt);
   const maxDevices = integer(body.maxDevices, "maxDevices", 1, 50);
-  const result = await env.DB.prepare("UPDATE licenses SET expires_at = ?, max_devices = ?, updated_at = ? WHERE id = ?")
-    .bind(expiresAt, maxDevices, isoNow(), licenseId).run();
-  if (!result.meta.changes) return error(404, "license_not_found", "라이선스를 찾을 수 없습니다.");
+  // Do not evict arbitrary PCs. This condition is atomic with the limit update.
+  const result = await env.DB.prepare(`UPDATE licenses SET expires_at = ?, max_devices = ?, updated_at = ?
+      WHERE id = ? AND (SELECT COUNT(DISTINCT a.id) FROM activations a JOIN license_sessions s ON s.activation_id=a.id
+        WHERE a.license_id = ? AND a.revoked_at IS NULL AND s.released_at IS NULL AND s.session_hash IS NOT NULL) <= ?`)
+    .bind(expiresAt, maxDevices, isoNow(), licenseId, licenseId, maxDevices).run();
+  if (!result.meta.changes) {
+    const exists = await env.DB.prepare("SELECT id FROM licenses WHERE id = ?").bind(licenseId).first();
+    if (!exists) return error(404, "license_not_found", "라이선스를 찾을 수 없습니다.");
+    return error(409, "active_devices_exceed_limit", "현재 사용 중인 PC 수보다 동시 사용 대수를 줄일 수 없습니다. 먼저 다른 PC에서 미라클을 종료하세요.");
+  }
   await audit(env, licenseId, "update_license", `expiresAt=${expiresAt ?? "none"};maxDevices=${maxDevices}`);
   return json({ ok: true, expiresAt, maxDevices });
 }

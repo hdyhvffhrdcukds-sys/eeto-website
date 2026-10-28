@@ -18,6 +18,19 @@ jobs:
       - name: Get source
         uses: actions/checkout@v4
 
+      - name: Prepare test runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Verify service behavior before deployment
+        working-directory: license-server
+        run: |
+          node admin-key.test.mjs
+          node permanent.test.mjs
+          node revocation.test.mjs
+          node device-limit.test.mjs
+
       - name: Create or update the license database tables
         uses: cloudflare/wrangler-action@v3
         with:

@@ -39,23 +39,31 @@ $body = @{ customerName = "고객사"; maxDevices = 1; expiresAt = "2027-12-31T2
 Invoke-RestMethod -Method Post -Uri "https://license.example.workers.dev/v1/admin/licenses" -Headers $headers -Body $body
 ```
 
-응답에 한 번만 표시되는 `licenseKey`를 고객에게 전달합니다. 서버는 평문 키가 아닌 SHA-256 해시만 저장합니다.
+발급된 `licenseKey`를 고객에게 전달합니다. 인증에는 SHA-256 해시를 사용하며, 관리자 목록 표시를 위해 별도의 key_value도 보관하므로 데이터베이스와 관리자 권한을 보호해야 합니다.
 
 ### 기존 PC 활성화 해제
 
 `GET /v1/admin/licenses`로 라이선스와 활성화 목록을 확인한 뒤, 해당 활성화 ID를 사용해 `POST /v1/admin/licenses/{licenseId}/revoke`를 호출합니다.
 
-## 프로그램 연결 규칙
+## 프로그램 연결 규칙 (동시 사용 v2)
 
-- 최초 활성화: `POST /v1/activate`
-- 주기 확인: `POST /v1/check`
-- PC 식별값은 프로그램이 만든 비가역 해시를 사용합니다.
-- 성공 응답의 `checkUntil` 전까지 오프라인 사용을 허용합니다. 기본값은 7일입니다.
-- 만료, 정지, 다른 PC 사용 또는 유예기간 종료 시 NC 출력과 핵심 기능을 차단합니다.
+- 허용 대수는 설치/등록 대수가 아니라 현재 사용 중인 PC 수입니다.
+- 프로세스마다 새 sessionId를 만들고 protocolVersion=2를 전송합니다.
+- 실행 시: 저장된 활성화 토큰으로 POST /v1/check, purpose=startup. 최초 키 입력은 /v1/activate.
+- NC 내보내기 직전: POST /v1/check, purpose=nc-export. 사용권을 새로 획득하지 않고 현재 세션만 확인합니다.
+- 정상 종료: POST /v1/release로 해당 프로세스 사용권만 반환합니다. 추가 인증 요청이 아닙니다.
+- 주기 조회/자동 만료/오프라인 유예는 없습니다. 응답 checkUntil은 캐시 인증에 사용하지 않습니다.
+- 같은 PC의 여러 프로세스는 1대이며, 마지막 프로세스가 종료되어야 다른 PC에 자리가 납니다.
+- 비정상 종료/종료 시 통신 실패는 관리자 화면의 ‘사용 중 PC / 해제’에서 해당 PC를 명시적으로 해제합니다.
+- 해제된 프로세스는 다음 NC 내보내기가 거부됩니다. WS 저장 후 재실행하여 새 세션을 획득해야 합니다.
+- 중지/만료/PC 인증 해제는 영구락보다 우선합니다. 작업 중인 프로그램은 다음 NC 내보내기에 반영됩니다.
+- 관리 API: GET /v1/admin/licenses/{id}/sessions, POST /v1/admin/licenses/{id}/release-device (activationId).
+- 0004-concurrent-sessions.sql을 적용한 서버와 v2 클라이언트를 함께 배포해야 합니다. 구형 클라이언트 요청은 426으로 업데이트를 안내합니다. 구형 오프라인 실행 파일 자체를 원격 변경할 수 없으므로 모든 PC에 새 버전을 설치해야 합니다.
+- 테스트: Node.js 24에서 각 *.test.mjs 실행. device-limit.test.mjs는 메모리 SQLite와 실제 Worker 라우트를 사용하며 운영 고객 데이터에 접근하지 않습니다.
 
 ## 보안 원칙
 
 - `ADMIN_API_KEY`, 고객 키, D1 덤프를 Git에 커밋하지 않습니다.
 - 모든 요청은 HTTPS만 사용합니다.
 - 관리자 API는 관리 화면에서만 호출하며 일반 프로그램에는 관리자 키를 포함하지 않습니다.
-- 무료 한도 초과 시 활성화 확인만 잠시 실패할 수 있으므로, 프로그램은 마지막 정상 확인 후 7일의 오프라인 유예를 적용합니다.
+- 서버 연결 실패 시 실행과 NC 내보내기는 승인하지 않습니다. 이미 열린 작업 데이터는 삭제하지 않습니다.

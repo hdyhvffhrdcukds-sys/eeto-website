@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import worker from './src/index.js';
+const deviceHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('test-device')))).map(b=>b.toString(16).padStart(2,'0')).join('');
+const license={id:'test',license_id:'test',customer_name:'test',enabled:0,expires_at:null,features_json:'[]',device_hash:deviceHash,revoked_at:null,max_devices:1};
+const env={LEASE_DAYS:'7',DB:{prepare(){return{bind(){return{async first(){return license},async run(){return {meta:{changes:1}}}}}}}}};
+const check=()=>worker.fetch(new Request('https://example.test/v1/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({activationToken:'test-token',deviceId:'test-device',sessionId:'test-session',protocolVersion:2,purpose:'startup'})}),env);
+const activate=()=>worker.fetch(new Request('https://example.test/v1/activate',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({licenseKey:'test-key',deviceId:'test-device',sessionId:'test-session',protocolVersion:2,purpose:'startup'})}),env);
+assert.equal((await check()).status,403,'stopped permanent license must fail check');
+assert.equal((await activate()).status,403,'stopped permanent license cannot reactivate');
+license.enabled=1;assert.equal((await check()).status,200,'enabled permanent license works');
+license.revoked_at=new Date().toISOString();assert.equal((await check()).status,403,'device revocation wins');
+license.revoked_at=null;license.expires_at='2000-01-01T00:00:00Z';assert.equal((await check()).status,403,'expired license fails');
+console.log('PASS server suspension/revocation override permanent and dated licenses');
